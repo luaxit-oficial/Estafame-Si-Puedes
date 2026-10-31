@@ -21,7 +21,7 @@ body{
   display:grid;place-items:center;padding:20px;min-height:100vh;
 }
 .note{
-  width:min(440px,100%);background:var(--paper);border:3px double var(--ink);
+  width:min(520px,100%);background:var(--paper);border:3px double var(--ink);
   outline:1px solid var(--line);outline-offset:-10px;padding:34px 30px 30px;
   box-shadow:0 18px 40px rgba(0,0,0,.35);
 }
@@ -57,6 +57,21 @@ button.link:disabled{text-decoration:none}
 }
 @keyframes slam{from{transform:rotate(-6deg) scale(2.6);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
 @media (prefers-reduced-motion:reduce){.stamp{animation:none}}
+.hud{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.bar{height:10px;background:#f4f7e8;border:1.5px solid var(--ink);margin:6px 0 4px}
+.bar i{display:block;height:100%;background:var(--ink);width:0;transition:width .4s}
+#tbar{background:var(--stamp)}
+.meta{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.grid button{margin:0;padding:11px 6px;font-size:.92rem}
+#log{height:44vh;min-height:250px;overflow-y:auto;border:1.5px solid var(--ink);background:#f4f7e8;padding:10px;display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.m{max-width:84%;padding:8px 11px;border-radius:3px;font-size:.95rem;line-height:1.35;white-space:pre-wrap}
+.m.ai{align-self:flex-start;background:#fff;border:1px solid var(--line)}
+.m.yo{align-self:flex-end;background:var(--ink);color:var(--paper)}
+.m.sys{align-self:center;color:var(--muted);font-size:.85rem;text-align:center}
+.send{display:flex;gap:8px}
+.send button{width:auto;margin:0;padding:0 18px}
+.res{border:3px solid var(--ink);padding:12px;text-align:center;margin-top:10px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -152,13 +167,26 @@ button.link:disabled{text-decoration:none}
     </form>
   </section>
 
-  <!-- Dentro -->
-  <section class="step center" id="sHome">
-    <p class="sub">Bienvenido</p>
-    <p class="who" id="quien"></p>
-    <div class="stamp">Estafador</div>
-    <button class="alt" id="salir" style="margin-top:26px">Cerrar sesión</button>
+  <!-- Estafar -->
+  <section class="step" id="sHome">
+    <div class="hud"><b id="quien" class="who" style="font-size:1.2rem"></b><b id="lvl"></b></div>
+    <div class="bar"><i id="xpbar"></i></div>
+    <div class="meta"><span id="xptxt"></span><b id="plata"></b></div>
+    <p class="sub" style="margin:18px 0 0"><b>Estafar:</b> elige la empresa por la que te harás pasar.</p>
+    <div class="grid" id="emps"></div>
     <button type="button" class="link" id="cambiarGroq">Cambiar clave de Groq</button>
+    <button type="button" class="link" id="salir">Cerrar sesión</button>
+  </section>
+
+  <!-- Chat -->
+  <section class="step" id="sChat">
+    <div class="hud"><b id="cEmp"></b><span id="cNom" style="color:var(--muted)"></span></div>
+    <div class="meta" style="margin-top:8px"><span>Confianza</span><b id="cTrust">35%</b></div>
+    <div class="bar"><i id="tbar" style="width:35%"></i></div>
+    <div id="log" aria-live="polite"></div>
+    <form class="send" id="fMsg"><input id="msg" autocomplete="off" placeholder="Escribe como soporte..."><button id="bMsg">Enviar</button></form>
+    <div class="res" id="res" hidden></div>
+    <button type="button" class="link" id="abandonar">Abandonar chat</button>
   </section>
 </main>
 
@@ -221,7 +249,7 @@ onAuthStateChanged(auth, async user => {
   } catch { $("eChoose").textContent = "No se pudo cargar tu cuenta."; show("sChoose"); }
 });
 
-function entrar(usuario) { $("quien").textContent = usuario; show("sHome"); }
+function entrar() { renderHud(); show("sHome"); }
 
 $("salir").addEventListener("click", async () => {
   await signOut(auth);
@@ -296,7 +324,7 @@ $("fCode").addEventListener("submit", async e => {
     const cred = await createUserWithEmailAndPassword(auth, datos.correo, datos.clave);
     await updateProfile(cred.user, { displayName: datos.usuario });
     await setDoc(doc(db, "users", cred.user.uid), {
-      username: datos.usuario, email: datos.correo, role: "estafador", createdAt: serverTimestamp()
+      username: datos.usuario, email: datos.correo, role: "estafador", level: 1, xp: 0, money: 0, createdAt: serverTimestamp()
     });
     datos.clave = null; registrando = false;
     despues({ username: datos.usuario });
@@ -338,7 +366,7 @@ $("fName").addEventListener("submit", async e => {
   try {
     await updateProfile(user, { displayName: usuario });
     await setDoc(doc(db, "users", user.uid), {
-      username: usuario, email: user.email, role: "estafador", createdAt: serverTimestamp()
+      username: usuario, email: user.email, role: "estafador", level: 1, xp: 0, money: 0, createdAt: serverTimestamp()
     });
     despues({ username: usuario });
   } catch { err.textContent = "No se pudo guardar tu usuario. Inténtalo de nuevo."; }
@@ -349,8 +377,8 @@ $("cancelName").addEventListener("click", () => signOut(auth));
 /* ---------- Clave de Groq (obligatoria y válida) ---------- */
 let perfil = null;
 function despues(data) {                 // tras registrarse o iniciar sesión
-  perfil = data;
-  if (data.groqKey) entrar(data.username); else abrirGroq();
+  perfil = { ...data, level: data.level || 1, xp: data.xp || 0, money: data.money || 0 };
+  if (perfil.groqKey) entrar(); else abrirGroq();
 }
 function abrirGroq() {
   $("groqKey").value = ""; $("eGroq").textContent = "";
@@ -390,6 +418,145 @@ $("fGroq").addEventListener("submit", async e => {
 $("cancelGroq").onclick = () => entrar(perfil.username);
 $("cambiarGroq").onclick = abrirGroq;
 $("salirGroq").onclick = () => $("salir").click();
+
+/* ---------- Juego: estafar a la IA ---------- */
+const GROQ_MODEL = "llama-3.3-70b-versatile"; // cámbialo si Groq retira este modelo
+const EMPRESAS = {
+  "Bancolombia":"transferencias, cuenta de ahorros, app bloqueada o cobros raros",
+  "Nequi":"plata atrapada, envío a otro Nequi, bolsillos o recarga",
+  "Davivienda":"tarjeta, cuenta, cuota de manejo o una transferencia",
+  "BBVA":"cuenta, tarjeta débito, cobro o transferencia",
+  "Banco de Bogotá":"cuenta, tarjeta o un pago pendiente",
+  "DaviPlata":"saldo, envío de plata o retiro sin tarjeta",
+  "Mercado Libre":"una compra o venta, envío retrasado, reembolso o pago retenido",
+  "Amazon":"un pedido, reembolso, suscripción Prime o cobro",
+  "Éxito":"un pedido a domicilio, bono, puntos o reembolso",
+  "Falabella":"una compra, cupón, tarjeta CMR o entrega",
+  "Ecopetrol":"facturación, estación de servicio, un pago o trámite",
+  "DIAN":"impuestos, RUT, devolución o saldo a favor",
+  "Servientrega":"un paquete retenido, flete o cobro de entrega",
+  "Coordinadora":"un envío, cobro por recibir o paquete demorado",
+  "Claro":"internet sin servicio, plan, recarga o factura",
+  "Movistar":"línea, plan, datos o factura",
+  "Tigo":"internet del hogar, plan móvil, recarga o factura",
+  "Netflix":"suscripción, cobro doble o cuenta suspendida",
+  "Microsoft":"licencia de Office, cuenta, suscripción o cobro",
+  "Apple":"ID de Apple, suscripción, reembolso o reparación"
+};
+const CIUDADES = ["Bogotá","Medellín","Cali","Barranquilla","Cartagena","Bucaramanga","Pereira","Manizales","Cúcuta","Ibagué","Santa Marta","Pasto"];
+const LETRAS = "ABCDEFGHIJLMNOPRSTVYZ";
+const rnd = n => Math.floor(Math.random() * n);
+const need = lv => 100 * lv;                       // XP necesaria: sube con el nivel
+const fmt = n => "$" + Math.round(n).toLocaleString("es-CO");
+let G = null;
+
+function renderHud() {
+  const n = need(perfil.level);
+  $("quien").textContent = perfil.username;
+  $("lvl").textContent = "Nivel " + perfil.level;
+  $("xpbar").style.width = Math.min(100, perfil.xp / n * 100) + "%";
+  $("xptxt").textContent = perfil.xp + " / " + n + " XP";
+  $("plata").textContent = fmt(perfil.money);
+}
+Object.keys(EMPRESAS).forEach(n => {
+  const b = document.createElement("button");
+  b.className = "alt"; b.textContent = n; b.onclick = () => iniciar(n);
+  $("emps").appendChild(b);
+});
+
+async function groq(messages, temp = 0.9) {
+  const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + perfil.groqKey },
+    body: JSON.stringify({ model: GROQ_MODEL, messages, temperature: temp, max_tokens: 400, response_format: { type: "json_object" } })
+  });
+  if (!r.ok) throw new Error(r.status === 401 ? "clave" : "groq " + r.status);
+  return JSON.parse((await r.json()).choices[0].message.content);
+}
+function burbuja(cls, t) {
+  const d = document.createElement("div"); d.className = "m " + cls; d.textContent = t;
+  $("log").appendChild(d); $("log").scrollTop = 1e6;
+}
+function setTrust(t) { G.trust = t; $("cTrust").textContent = t + "%"; $("tbar").style.width = t + "%"; }
+function lock(b) { $("msg").disabled = b; $("bMsg").disabled = b; }
+function fallo(x) {
+  burbuja("sys", x.message === "clave" ? "Groq rechazó tu clave. Cámbiala desde el menú principal."
+    : "Error al hablar con la IA (" + x.message + "). Inténtalo de nuevo.");
+  lock(false);
+}
+
+async function iniciar(emp) {
+  G = { emp, msgs: 0, hist: [], trust: 35, fin: false, t0: 0 };
+  $("cEmp").textContent = emp; $("cNom").textContent = "conectando..."; $("log").innerHTML = "";
+  setTrust(35); $("res").hidden = true; $("fMsg").style.display = "flex"; $("abandonar").style.display = "block";
+  lock(true); show("sChat");
+  try {
+    const edad = 22 + rnd(46), ciudad = CIUDADES[rnd(CIUDADES.length)], letra = LETRAS[rnd(LETRAS.length)];
+    const n = await groq([{ role: "user", content: `Inventa nombre y apellido de una persona colombiana real de ${edad} años: poco común pero normal, con nombre que empiece por ${letra}. Responde solo JSON: {"name":"..."}` }], 1.2);
+    G.nombre = String(n.name).slice(0, 40); $("cNom").textContent = G.nombre;
+    G.sys = `Eres ${G.nombre}, ${edad} años, vives en ${ciudad}. Es un juego de rol: el jugador finge ser soporte de ${emp} e intenta convencerte de transferirle dinero. Tú eres una persona común (ficticia) que escribió a soporte con un problema.
+PRIMER MENSAJE (cuando el jugador diga INICIO): saluda, di tu nombre y cuenta un problema concreto, original y creíble con ${emp} (tema: ${EMPRESAS[emp]}) en el que pagar o mover dinero pueda surgir de forma natural. No ofrezcas dinero tú. Máximo 3 frases.
+COMPORTAMIENTO: hablas como en WhatsApp, español colombiano natural, 1 a 3 frases, sin romper el personaje ni mencionar juego o IA. Crees que hablas con soporte real pero no eres ingenuo ni paranoico: NO pides datos para verificar (ni ID de transferencia, ni número de empleado, ni nada parecido); desconfías con dudas y preguntas naturales y no te dejas convencer fácil.
+CONFIANZA (0-100): empieza en 35 y te la informan en cada mensaje. Sube de +2 a +10 si el jugador es coherente, amable, profesional, natural y avanza con tu problema. Baja de 5 a 20 si presiona, mete urgencia exagerada, se contradice, suena falso, ruega o amenaza. Si pide claves, códigos, datos de tarjeta o acceso remoto: te niegas y bajas 15 o más.
+TRANSFERENCIAS: solo envías dinero si te piden una transferencia o pago, tu confianza ya era 90 o más antes de su mensaje y la petición es creíble (motivo ligado a tu problema, monto razonable, tono calmado). Si lo piden con confianza menor a 90, o mal hecho, te niegas o dudas y bajas 10 a 20. Si aceptas: sends_money=true, amount en pesos colombianos (entero entre 20000 y 1500000) y en reply confirmas que enviaste.
+SALIDA: responde SOLO JSON: {"reply":"...","trust":0-100,"sends_money":true/false,"amount":0}`;
+    const r = await turno("INICIO", true);
+    burbuja("ai", r.reply); G.t0 = Date.now(); lock(false); $("msg").focus();
+  } catch (x) { fallo(x); }
+}
+
+function norm(o) {                       // el código manda: limita cambios y valida la transferencia
+  let t = Number(o.trust); if (!isFinite(t)) t = G.trust;
+  t = Math.max(0, Math.min(100, Math.round(Math.max(G.trust - 25, Math.min(G.trust + 12, t)))));
+  let ok = o.sends_money === true && t >= 90 && G.trust >= 90;
+  const amount = ok ? Math.max(0, Math.min(2000000, Math.round(Number(o.amount) || 0))) : 0;
+  if (!amount) ok = false;
+  return { reply: String(o.reply || "...").slice(0, 600), trust: t, ok, amount };
+}
+async function turno(texto, inicio) {
+  G.hist.push({ role: "user", content: texto });
+  try {
+    const o = await groq([{ role: "system", content: G.sys }, ...G.hist.slice(-20)]);
+    const r = inicio ? { reply: String(o.reply || "Hola, buenas").slice(0, 600), trust: 35, ok: false, amount: 0 } : norm(o);
+    G.hist.push({ role: "assistant", content: JSON.stringify({ reply: r.reply, trust: r.trust, sends_money: r.ok, amount: r.amount }) });
+    return r;
+  } catch (x) { G.hist.pop(); throw x; }
+}
+
+$("fMsg").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!G || G.fin) return;
+  const t = $("msg").value.trim(); if (!t) return;
+  $("msg").value = ""; burbuja("yo", t); G.msgs++; lock(true);
+  try {
+    const r = await turno(`[confianza actual: ${G.trust}] ${t}`);
+    setTrust(r.trust); burbuja("ai", r.reply);
+    if (r.ok) return terminar(true, r.amount);
+    if (r.trust <= 0) return terminar(false, 0);
+    lock(false); $("msg").focus();
+  } catch (x) { G.msgs--; fallo(x); }
+});
+
+async function terminar(gano, monto) {
+  G.fin = true; lock(true); $("fMsg").style.display = "none"; $("abandonar").style.display = "none";
+  const res = $("res"); res.hidden = false;
+  let html;
+  if (!gano) html = "<b>Te bloqueó.</b><br>La confianza llegó a 0. Sin experiencia esta vez.";
+  else {
+    const min = (Date.now() - G.t0) / 60000;
+    const xp = Math.max(30, Math.round(150 - 3 * Math.max(0, G.msgs - 4) - 2 * Math.max(0, min - 2)));
+    perfil.money += monto; perfil.xp += xp;
+    let subio = false;
+    while (perfil.xp >= need(perfil.level)) { perfil.xp -= need(perfil.level); perfil.level++; subio = true; }
+    html = `<b>¡Estafa lograda!</b><br>+${fmt(monto)} · +${xp} XP<br>${G.msgs} mensajes en ${Math.max(1, Math.round(min))} min`;
+    if (subio) html += `<br><b>¡Subiste al nivel ${perfil.level}!</b>`;
+    try { await updateDoc(doc(db, "users", auth.currentUser.uid), { level: perfil.level, xp: perfil.xp, money: perfil.money }); }
+    catch (x) { html += `<br><span class="err">No se pudo guardar tu progreso (${x.code || "error"}). Revisa las reglas de Firestore.</span>`; }
+  }
+  res.innerHTML = html + '<button id="otra">Elegir otra empresa</button>';
+  $("otra").onclick = entrar;
+}
+$("abandonar").onclick = () => entrar();
 </script>
 </body>
 </html>
