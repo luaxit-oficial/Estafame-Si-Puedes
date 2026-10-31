@@ -22,104 +22,139 @@ body{
 }
 .note{
   width:min(440px,100%);background:var(--paper);border:3px double var(--ink);
-  outline:1px solid var(--line);outline-offset:-10px;padding:34px 30px 30px;position:relative;
+  outline:1px solid var(--line);outline-offset:-10px;padding:34px 30px 30px;
   box-shadow:0 18px 40px rgba(0,0,0,.35);
 }
 h1{font-family:var(--serif);font-weight:800;font-size:2.1rem;line-height:1.05;margin:0 0 6px;text-align:center;letter-spacing:-.01em}
-.sub{text-align:center;color:var(--muted);margin:0 0 22px;font-size:.95rem}
+.sub{text-align:center;color:var(--muted);margin:0 0 20px;font-size:.95rem}
 .step{display:none}
 .step.on{display:block}
-label{display:block;font-weight:600;font-size:.9rem;margin:14px 0 5px}
+label{display:block;font-weight:600;font-size:.9rem;margin:13px 0 5px}
+small{display:block;color:var(--muted);margin-top:4px;font-size:.8rem}
 input{
   width:100%;padding:11px 12px;font:inherit;color:var(--ink);background:#f4f7e8;
   border:1.5px solid var(--ink);border-radius:2px;
 }
 input:focus-visible,button:focus-visible{outline:3px solid var(--stamp);outline-offset:2px}
 button{
-  width:100%;margin-top:22px;padding:13px;font:600 1rem var(--sans);cursor:pointer;
-  background:var(--ink);color:var(--paper);border:0;border-radius:2px;
+  width:100%;margin-top:14px;padding:13px;font:600 1rem var(--sans);cursor:pointer;
+  background:var(--ink);color:var(--paper);border:1.5px solid var(--ink);border-radius:2px;
 }
+button.alt{background:transparent;color:var(--ink)}
 button:disabled{opacity:.55;cursor:wait}
-button.link{background:none;color:var(--ink);text-decoration:underline;margin-top:10px;padding:8px;font-weight:400}
+button.link{background:none;border:0;color:var(--ink);text-decoration:underline;margin-top:6px;padding:8px;font-weight:400}
 button.link:disabled{text-decoration:none}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:18px 0 4px}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
 .err{color:var(--stamp);font-weight:600;font-size:.9rem;min-height:1.2em;margin:12px 0 0}
 #codigo{text-align:center;font:600 1.8rem var(--serif);letter-spacing:.4em;padding-left:.4em}
-
-/* ruleta */
-.reel{
-  height:120px;border-block:2px solid var(--ink);margin:26px 0;display:grid;place-items:center;
-  background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(22,50,43,.06) 6px 7px);overflow:hidden;
-}
-.reel span{font-family:var(--serif);font-weight:800;font-size:2.4rem;text-transform:capitalize}
-.reel.tick span{animation:tick .09s ease-out}
-@keyframes tick{from{transform:translateY(-22px);opacity:.3}to{transform:none;opacity:1}}
-.stamp{
-  display:none;margin:0 auto;width:max-content;border:4px solid var(--stamp);color:var(--stamp);
-  font:800 2rem var(--serif);padding:6px 18px;text-transform:uppercase;transform:rotate(-6deg);
-}
-.stamp.on{display:block;animation:slam .35s cubic-bezier(.2,1.6,.4,1)}
-@keyframes slam{from{transform:rotate(-6deg) scale(2.6);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
 .center{text-align:center}
-.who{font-family:var(--serif);font-size:1.3rem;margin:4px 0 0}
-@media (prefers-reduced-motion:reduce){.reel.tick span,.stamp.on{animation:none}}
+.who{font-family:var(--serif);font-size:1.4rem;margin:4px 0 0}
+.stamp{
+  width:max-content;margin:22px auto 4px;border:4px solid var(--stamp);color:var(--stamp);
+  font:800 2rem var(--serif);padding:6px 18px;text-transform:uppercase;transform:rotate(-6deg);
+  animation:slam .35s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes slam{from{transform:rotate(-6deg) scale(2.6);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.stamp{animation:none}}
 </style>
 </head>
 <body>
 <main class="note">
   <h1>Estafame Si Puedes</h1>
 
-  <!-- 1. Registro -->
-  <section class="step on" id="s1">
-    <p class="sub">Crea tu cuenta para entrar a jugar.</p>
-    <form id="f1" novalidate>
-      <label for="usuario">Usuario</label>
-      <input id="usuario" autocomplete="username" maxlength="20" required>
+  <section class="step on center" id="sLoad"><p class="sub">Cargando...</p></section>
+
+  <!-- Elegir -->
+  <section class="step" id="sChoose">
+    <p class="sub">¿Qué quieres hacer?</p>
+    <button id="goReg">Registrarme</button>
+    <button id="goLogin" class="alt">Ya tengo cuenta: iniciar sesión</button>
+    <div class="or">o</div>
+    <button class="alt gbtn">Continuar con Google</button>
+    <p class="err" id="eChoose" role="alert"></p>
+  </section>
+
+  <!-- Registro -->
+  <section class="step" id="sReg">
+    <p class="sub">Crea tu cuenta.</p>
+    <form id="fReg" novalidate>
+      <label for="usuario">Nombre de usuario</label>
+      <input id="usuario" maxlength="20" autocomplete="off" required>
+      <small>Inventa uno. No uses tu nombre real.</small>
       <label for="correo">Correo</label>
       <input id="correo" type="email" autocomplete="email" required>
+      <label for="correo2">Repite el correo</label>
+      <input id="correo2" type="email" autocomplete="off" required>
       <label for="clave">Contraseña</label>
       <input id="clave" type="password" autocomplete="new-password" minlength="6" required>
-      <p class="err" id="e1" role="alert"></p>
-      <button id="b1">Enviar código al correo</button>
+      <label for="clave2">Repite la contraseña</label>
+      <input id="clave2" type="password" autocomplete="new-password" required>
+      <p class="err" id="eReg" role="alert"></p>
+      <button id="bReg">Registrarme</button>
+      <button type="button" class="link back">Volver</button>
     </form>
   </section>
 
-  <!-- 2. Código -->
-  <section class="step" id="s2">
+  <!-- Código -->
+  <section class="step" id="sCode">
     <p class="sub">Te enviamos un código de 6 dígitos a <b id="mail"></b>.</p>
-    <form id="f2" novalidate>
+    <form id="fCode" novalidate>
       <label for="codigo">Código</label>
       <input id="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required>
-      <p class="err" id="e2" role="alert"></p>
-      <button id="b2">Verificar código</button>
+      <p class="err" id="eCode" role="alert"></p>
+      <button id="bCode">Verificar y crear cuenta</button>
       <button type="button" class="link" id="reenviar">Reenviar código</button>
-      <button type="button" class="link" id="atras">Cambiar correo</button>
+      <button type="button" class="link" id="cambiar">Cambiar datos</button>
     </form>
   </section>
 
-  <!-- 3. Ruleta -->
-  <section class="step center" id="s3">
-    <p class="sub">Correo verificado. Sorteando tu rol...</p>
-    <div class="reel" id="reel" aria-live="polite"><span id="reelTxt">?</span></div>
-    <div class="stamp" id="stamp"></div>
-    <p class="err" id="e3" role="alert"></p>
-    <button id="reintentar" style="display:none">Reintentar crear cuenta</button>
+  <!-- Login -->
+  <section class="step" id="sLogin">
+    <p class="sub">Entra con tu cuenta.</p>
+    <form id="fLogin" novalidate>
+      <label for="lcorreo">Correo</label>
+      <input id="lcorreo" type="email" autocomplete="email" required>
+      <label for="lclave">Contraseña</label>
+      <input id="lclave" type="password" autocomplete="current-password" required>
+      <p class="err" id="eLogin" role="alert"></p>
+      <button id="bLogin">Iniciar sesión</button>
+    </form>
+    <div class="or">o</div>
+    <button class="alt gbtn">Continuar con Google</button>
+    <button type="button" class="link back">Volver</button>
   </section>
 
-  <!-- 4. Listo -->
-  <section class="step center" id="s4">
-    <p class="sub">Tu cuenta está creada.</p>
+  <!-- Nombre para cuentas de Google -->
+  <section class="step" id="sName">
+    <p class="sub">Elige tu nombre de usuario.</p>
+    <form id="fName" novalidate>
+      <label for="gusuario">Nombre de usuario</label>
+      <input id="gusuario" maxlength="20" autocomplete="off" required>
+      <small>Inventa uno. No uses tu nombre real.</small>
+      <p class="err" id="eName" role="alert"></p>
+      <button id="bName">Continuar</button>
+      <button type="button" class="link" id="cancelName">Cancelar</button>
+    </form>
+  </section>
+
+  <!-- Dentro -->
+  <section class="step center" id="sHome">
+    <p class="sub">Bienvenido</p>
     <p class="who" id="quien"></p>
-    <div class="stamp on" id="stampFinal" style="margin-top:22px"></div>
+    <div class="stamp">Estafador</div>
+    <button class="alt" id="salir" style="margin-top:26px">Cerrar sesión</button>
   </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signInWithPopup, GoogleAuthProvider, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ====== CONFIGURA ESTO ====== */
+/* ====== CONFIGURACIÓN ====== */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAjgEo97LnNSRW4X4-hb_YDjgrIbo-orQo",
   authDomain: "estafame-si-puedes.firebaseapp.com",
@@ -131,25 +166,71 @@ const FIREBASE_CONFIG = {
 const EMAILJS_PUBLIC_KEY = "Y4biAeZ_R2H1p1Rab";
 const EMAILJS_SERVICE_ID = "service_sjvu9db";
 const EMAILJS_TEMPLATE_ID = "template_ipbje4u"; // variables: {{to_email}}, {{username}}, {{code}}
-/* ============================ */
+/* =========================== */
 
-const ROLES = ["cliente", "estafador", "vendedor", "soporte", "hacker"];
 const CODE_TTL = 10 * 60 * 1000, MAX_TRIES = 5, RESEND_WAIT = 30;
 
 const app = initializeApp(FIREBASE_CONFIG);
-const auth = getAuth(app);
+const auth = getAuth(app);   // la sesión se guarda en el navegador: no pide login cada vez
 const db = getFirestore(app);
 emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 
 const $ = id => document.getElementById(id);
-const show = n => document.querySelectorAll(".step").forEach(s => s.classList.toggle("on", s.id === "s" + n));
-let datos = null, codigo = null, expira = 0, intentos = 0, rolFinal = null, timer = null;
+const show = id => document.querySelectorAll(".step").forEach(s => s.classList.toggle("on", s.id === id));
+let datos = null, codigo = null, expira = 0, intentos = 0, timer = null, registrando = false;
 
+const MENSAJES = {
+  "auth/email-already-in-use": "Ese correo ya tiene una cuenta. Inicia sesión.",
+  "auth/weak-password": "La contraseña es muy débil.",
+  "auth/invalid-credential": "Correo o contraseña incorrectos.",
+  "auth/wrong-password": "Correo o contraseña incorrectos.",
+  "auth/user-not-found": "Correo o contraseña incorrectos.",
+  "auth/invalid-email": "El correo no es válido.",
+  "auth/too-many-requests": "Demasiados intentos. Espera un momento.",
+  "auth/popup-closed-by-user": "Cerraste la ventana de Google.",
+  "auth/cancelled-popup-request": "Cerraste la ventana de Google.",
+  "auth/popup-blocked": "Tu navegador bloqueó la ventana de Google.",
+  "auth/unauthorized-domain": "Este dominio no está autorizado en Firebase.",
+  "auth/operation-not-allowed": "Este método de acceso no está activado en Firebase."
+};
+const msg = x => MENSAJES[x.code] || "Ocurrió un error. Inténtalo de nuevo.";
+
+/* ---------- Sesión guardada ---------- */
+onAuthStateChanged(auth, async user => {
+  if (registrando) return;               // el registro maneja su propio flujo
+  if (!user) return show("sChoose");
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) entrar(snap.data().username);
+    else { $("gusuario").value = ""; show("sName"); }   // cuenta nueva de Google
+  } catch { $("eChoose").textContent = "No se pudo cargar tu cuenta."; show("sChoose"); }
+});
+
+function entrar(usuario) { $("quien").textContent = usuario; show("sHome"); }
+
+$("salir").addEventListener("click", async () => {
+  await signOut(auth);
+  document.querySelectorAll("form").forEach(f => f.reset());
+  show("sChoose");
+});
+
+/* ---------- Navegación ---------- */
+$("goReg").onclick = () => show("sReg");
+$("goLogin").onclick = () => show("sLogin");
+document.querySelectorAll(".back").forEach(b => b.onclick = () => show("sChoose"));
+
+/* ---------- Google ---------- */
+document.querySelectorAll(".gbtn").forEach(b => b.addEventListener("click", async () => {
+  const errs = [$("eChoose"), $("eLogin")]; errs.forEach(e => e.textContent = "");
+  const visible = $("sLogin").classList.contains("on") ? $("eLogin") : $("eChoose");
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (x) { visible.textContent = msg(x); }
+}));
+
+/* ---------- Registro ---------- */
 function nuevoCodigo() {
-  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
-  return String(n).padStart(6, "0");
+  return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
 }
-
 async function enviarCodigo() {
   codigo = nuevoCodigo(); expira = Date.now() + CODE_TTL; intentos = 0;
   await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
@@ -157,95 +238,98 @@ async function enviarCodigo() {
   });
   cooldown();
 }
-
 function cooldown() {
-  let t = RESEND_WAIT; const b = $("reenviar"); b.disabled = true;
-  clearInterval(timer);
+  let t = RESEND_WAIT; const b = $("reenviar"); b.disabled = true; clearInterval(timer);
   timer = setInterval(() => {
     b.textContent = t > 0 ? `Reenviar código (${t--}s)` : "Reenviar código";
     if (t < 0) { b.disabled = false; clearInterval(timer); }
   }, 1000);
 }
 
-// Paso 1: registro -> manda el código
-$("f1").addEventListener("submit", async e => {
+$("fReg").addEventListener("submit", async e => {
   e.preventDefault();
-  const usuario = $("usuario").value.trim(), correo = $("correo").value.trim(), clave = $("clave").value;
-  const err = $("e1"); err.textContent = "";
+  const err = $("eReg"); err.textContent = "";
+  const usuario = $("usuario").value.trim();
+  const correo = $("correo").value.trim().toLowerCase(), correo2 = $("correo2").value.trim().toLowerCase();
+  const clave = $("clave").value, clave2 = $("clave2").value;
   if (usuario.length < 3) return err.textContent = "El usuario necesita al menos 3 caracteres.";
+  if (usuario.includes("@")) return err.textContent = "El usuario no puede ser un correo.";
   if (!/^\S+@\S+\.\S+$/.test(correo)) return err.textContent = "Escribe un correo válido.";
+  if (correo !== correo2) return err.textContent = "Los correos no coinciden.";
   if (clave.length < 6) return err.textContent = "La contraseña necesita al menos 6 caracteres.";
+  if (clave !== clave2) return err.textContent = "Las contraseñas no coinciden.";
   datos = { usuario, correo, clave };
-  $("b1").disabled = true;
+  $("bReg").disabled = true;
   try {
     await enviarCodigo();
-    $("mail").textContent = correo; $("codigo").value = ""; show(2); $("codigo").focus();
-  } catch (x) {
-    err.textContent = "No se pudo enviar el código. Revisa el correo e inténtalo otra vez.";
-  }
-  $("b1").disabled = false;
+    $("mail").textContent = correo; $("codigo").value = ""; $("eCode").textContent = "";
+    show("sCode"); $("codigo").focus();
+  } catch { err.textContent = "No se pudo enviar el código. Revisa el correo e inténtalo otra vez."; }
+  $("bReg").disabled = false;
 });
 
-// Paso 2: verifica el código -> ruleta automática
-$("f2").addEventListener("submit", e => {
+$("fCode").addEventListener("submit", async e => {
   e.preventDefault();
-  const err = $("e2"); err.textContent = "";
-  if (Date.now() > expira) return err.textContent = "El código venció. Pide uno nuevo.";
+  const err = $("eCode"); err.textContent = "";
+  if (!codigo || Date.now() > expira) return err.textContent = "El código venció. Pide uno nuevo.";
   if (intentos >= MAX_TRIES) return err.textContent = "Demasiados intentos. Pide un código nuevo.";
-  if ($("codigo").value.trim() !== codigo) {
-    intentos++; return err.textContent = "Código incorrecto.";
-  }
-  codigo = null; // un solo uso
-  show(3); ruleta();
-});
-
-$("reenviar").addEventListener("click", async () => {
-  $("e2").textContent = "";
-  try { await enviarCodigo(); $("e2").textContent = "Código reenviado."; }
-  catch { $("e2").textContent = "No se pudo reenviar el código."; }
-});
-$("atras").addEventListener("click", () => { codigo = null; show(1); });
-
-// Paso 3: animación de ruleta; al terminar se crea la cuenta
-function ruleta() {
-  rolFinal = ROLES[crypto.getRandomValues(new Uint32Array(1))[0] % ROLES.length];
-  const reel = $("reel"), txt = $("reelTxt"), stamp = $("stamp");
-  stamp.classList.remove("on"); $("e3").textContent = ""; $("reintentar").style.display = "none";
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const pasos = reduce ? 1 : 28; let i = 0, idx = Math.floor(Math.random() * ROLES.length);
-
-  (function girar() {
-    i++;
-    const ultimo = i >= pasos;
-    txt.textContent = ultimo ? rolFinal : ROLES[idx++ % ROLES.length];
-    reel.classList.remove("tick"); void reel.offsetWidth; reel.classList.add("tick");
-    if (ultimo) {
-      stamp.textContent = rolFinal; stamp.classList.add("on");
-      return setTimeout(crearCuenta, reduce ? 300 : 1400);
-    }
-    setTimeout(girar, 60 + Math.pow(i / pasos, 3) * 420); // frena poco a poco
-  })();
-}
-
-async function crearCuenta() {
+  if ($("codigo").value.trim() !== codigo) { intentos++; return err.textContent = "Código incorrecto."; }
+  codigo = null;                         // un solo uso
+  $("bCode").disabled = true; $("bCode").textContent = "Creando cuenta...";
+  registrando = true;
   try {
     const cred = await createUserWithEmailAndPassword(auth, datos.correo, datos.clave);
     await updateProfile(cred.user, { displayName: datos.usuario });
     await setDoc(doc(db, "users", cred.user.uid), {
-      username: datos.usuario, email: datos.correo, role: rolFinal, createdAt: serverTimestamp()
+      username: datos.usuario, email: datos.correo, role: "estafador", createdAt: serverTimestamp()
     });
-    datos.clave = null;
-    $("quien").textContent = datos.usuario;
-    $("stampFinal").textContent = rolFinal;
-    show(4);
+    datos.clave = null; registrando = false;
+    entrar(datos.usuario);
   } catch (x) {
-    const msg = x.code === "auth/email-already-in-use" ? "Ese correo ya tiene una cuenta."
-      : x.code === "auth/weak-password" ? "La contraseña es muy débil."
-      : "No se pudo crear la cuenta. Inténtalo de nuevo.";
-    $("e3").textContent = msg; $("reintentar").style.display = "block";
+    registrando = false;
+    err.textContent = msg(x);
+    if (x.code === "auth/email-already-in-use") { $("eReg").textContent = msg(x); show("sReg"); }
   }
-}
-$("reintentar").addEventListener("click", crearCuenta);
+  $("bCode").disabled = false; $("bCode").textContent = "Verificar y crear cuenta";
+});
+
+$("reenviar").addEventListener("click", async () => {
+  $("eCode").textContent = "";
+  try { await enviarCodigo(); $("eCode").textContent = "Código reenviado."; }
+  catch { $("eCode").textContent = "No se pudo reenviar el código."; }
+});
+$("cambiar").addEventListener("click", () => { codigo = null; show("sReg"); });
+
+/* ---------- Iniciar sesión ---------- */
+$("fLogin").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("eLogin"); err.textContent = "";
+  const correo = $("lcorreo").value.trim(), clave = $("lclave").value;
+  if (!correo || !clave) return err.textContent = "Escribe tu correo y contraseña.";
+  $("bLogin").disabled = true;
+  try { await signInWithEmailAndPassword(auth, correo, clave); }   // el listener te deja entrar
+  catch (x) { err.textContent = msg(x); }
+  $("bLogin").disabled = false;
+});
+
+/* ---------- Usuario para cuentas de Google nuevas ---------- */
+$("fName").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("eName"); err.textContent = "";
+  const usuario = $("gusuario").value.trim(), user = auth.currentUser;
+  if (usuario.length < 3) return err.textContent = "El usuario necesita al menos 3 caracteres.";
+  if (usuario.includes("@")) return err.textContent = "El usuario no puede ser un correo.";
+  $("bName").disabled = true;
+  try {
+    await updateProfile(user, { displayName: usuario });
+    await setDoc(doc(db, "users", user.uid), {
+      username: usuario, email: user.email, role: "estafador", createdAt: serverTimestamp()
+    });
+    entrar(usuario);
+  } catch { err.textContent = "No se pudo guardar tu usuario. Inténtalo de nuevo."; }
+  $("bName").disabled = false;
+});
+$("cancelName").addEventListener("click", () => signOut(auth));
 </script>
 </body>
 </html>
