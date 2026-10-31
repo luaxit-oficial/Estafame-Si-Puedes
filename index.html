@@ -138,12 +138,27 @@ button.link:disabled{text-decoration:none}
     </form>
   </section>
 
+  <!-- Clave de Groq -->
+  <section class="step" id="sGroq">
+    <p class="sub">Conecta tu IA: pega tu clave de API de Groq.</p>
+    <form id="fGroq" novalidate>
+      <label for="groqKey">Clave de Groq</label>
+      <input id="groqKey" type="password" autocomplete="off" placeholder="gsk_..." required>
+      <small>Créala gratis en console.groq.com/keys. Se guarda en tu cuenta y debe ser válida.</small>
+      <p class="err" id="eGroq" role="alert"></p>
+      <button id="bGroq">Validar y guardar</button>
+      <button type="button" class="link" id="cancelGroq">Cancelar</button>
+      <button type="button" class="link" id="salirGroq">Cerrar sesión</button>
+    </form>
+  </section>
+
   <!-- Dentro -->
   <section class="step center" id="sHome">
     <p class="sub">Bienvenido</p>
     <p class="who" id="quien"></p>
     <div class="stamp">Estafador</div>
     <button class="alt" id="salir" style="margin-top:26px">Cerrar sesión</button>
+    <button type="button" class="link" id="cambiarGroq">Cambiar clave de Groq</button>
   </section>
 </main>
 
@@ -152,7 +167,7 @@ button.link:disabled{text-decoration:none}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signInWithPopup, GoogleAuthProvider, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ====== CONFIGURACIÓN ====== */
 const FIREBASE_CONFIG = {
@@ -201,7 +216,7 @@ onAuthStateChanged(auth, async user => {
   if (!user) return show("sChoose");
   try {
     const snap = await getDoc(doc(db, "users", user.uid));
-    if (snap.exists()) entrar(snap.data().username);
+    if (snap.exists()) despues(snap.data());
     else { $("gusuario").value = ""; show("sName"); }   // cuenta nueva de Google
   } catch { $("eChoose").textContent = "No se pudo cargar tu cuenta."; show("sChoose"); }
 });
@@ -284,7 +299,7 @@ $("fCode").addEventListener("submit", async e => {
       username: datos.usuario, email: datos.correo, role: "estafador", createdAt: serverTimestamp()
     });
     datos.clave = null; registrando = false;
-    entrar(datos.usuario);
+    despues({ username: datos.usuario });
   } catch (x) {
     registrando = false;
     err.textContent = msg(x);
@@ -325,11 +340,47 @@ $("fName").addEventListener("submit", async e => {
     await setDoc(doc(db, "users", user.uid), {
       username: usuario, email: user.email, role: "estafador", createdAt: serverTimestamp()
     });
-    entrar(usuario);
+    despues({ username: usuario });
   } catch { err.textContent = "No se pudo guardar tu usuario. Inténtalo de nuevo."; }
   $("bName").disabled = false;
 });
 $("cancelName").addEventListener("click", () => signOut(auth));
+
+/* ---------- Clave de Groq (obligatoria y válida) ---------- */
+let perfil = null;
+function despues(data) {                 // tras registrarse o iniciar sesión
+  perfil = data;
+  if (data.groqKey) entrar(data.username); else abrirGroq();
+}
+function abrirGroq() {
+  $("groqKey").value = ""; $("eGroq").textContent = "";
+  $("cancelGroq").style.display = perfil && perfil.groqKey ? "block" : "none";
+  show("sGroq");
+}
+async function groqValida(key) {
+  const r = await fetch("https://api.groq.com/openai/v1/models", { headers: { Authorization: "Bearer " + key } });
+  if (r.ok) return true;
+  if (r.status === 401 || r.status === 403) return false;
+  throw new Error("groq " + r.status);
+}
+$("fGroq").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("eGroq"); err.textContent = "";
+  const key = $("groqKey").value.trim();
+  if (!/^gsk_\S{20,}$/.test(key)) return err.textContent = "La clave de Groq empieza por gsk_ y es más larga.";
+  $("bGroq").disabled = true; $("bGroq").textContent = "Validando...";
+  try {
+    if (!(await groqValida(key))) err.textContent = "Esa clave no es válida. Revísala e inténtalo de nuevo.";
+    else {
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { groqKey: key });
+      perfil.groqKey = key; entrar(perfil.username);
+    }
+  } catch { err.textContent = "No se pudo comprobar la clave. Revisa tu conexión e inténtalo otra vez."; }
+  $("bGroq").disabled = false; $("bGroq").textContent = "Validar y guardar";
+});
+$("cancelGroq").onclick = () => entrar(perfil.username);
+$("cambiarGroq").onclick = abrirGroq;
+$("salirGroq").onclick = () => $("salir").click();
 </script>
 </body>
 </html>
