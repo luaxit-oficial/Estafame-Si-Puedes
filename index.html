@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estafame Si Puedes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,600;6..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#17302a; --paper:#e7ecd6; --ink:#16322b; --stamp:#b3342b; --muted:#5b7068; --line:#9db09f;
+  --serif:'Bodoni Moda',Georgia,serif; --sans:'Figtree',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--bg);
+  background-image:repeating-radial-gradient(circle at 50% 0,transparent 0 14px,rgba(231,236,214,.045) 14px 15px);
+  font-family:var(--sans);color:var(--ink);
+  display:grid;place-items:center;padding:20px;min-height:100vh;
+}
+.note{
+  width:min(440px,100%);background:var(--paper);border:3px double var(--ink);
+  outline:1px solid var(--line);outline-offset:-10px;padding:34px 30px 30px;position:relative;
+  box-shadow:0 18px 40px rgba(0,0,0,.35);
+}
+h1{font-family:var(--serif);font-weight:800;font-size:2.1rem;line-height:1.05;margin:0 0 6px;text-align:center;letter-spacing:-.01em}
+.sub{text-align:center;color:var(--muted);margin:0 0 22px;font-size:.95rem}
+.step{display:none}
+.step.on{display:block}
+label{display:block;font-weight:600;font-size:.9rem;margin:14px 0 5px}
+input{
+  width:100%;padding:11px 12px;font:inherit;color:var(--ink);background:#f4f7e8;
+  border:1.5px solid var(--ink);border-radius:2px;
+}
+input:focus-visible,button:focus-visible{outline:3px solid var(--stamp);outline-offset:2px}
+button{
+  width:100%;margin-top:22px;padding:13px;font:600 1rem var(--sans);cursor:pointer;
+  background:var(--ink);color:var(--paper);border:0;border-radius:2px;
+}
+button:disabled{opacity:.55;cursor:wait}
+button.link{background:none;color:var(--ink);text-decoration:underline;margin-top:10px;padding:8px;font-weight:400}
+button.link:disabled{text-decoration:none}
+.err{color:var(--stamp);font-weight:600;font-size:.9rem;min-height:1.2em;margin:12px 0 0}
+#codigo{text-align:center;font:600 1.8rem var(--serif);letter-spacing:.4em;padding-left:.4em}
+
+/* ruleta */
+.reel{
+  height:120px;border-block:2px solid var(--ink);margin:26px 0;display:grid;place-items:center;
+  background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(22,50,43,.06) 6px 7px);overflow:hidden;
+}
+.reel span{font-family:var(--serif);font-weight:800;font-size:2.4rem;text-transform:capitalize}
+.reel.tick span{animation:tick .09s ease-out}
+@keyframes tick{from{transform:translateY(-22px);opacity:.3}to{transform:none;opacity:1}}
+.stamp{
+  display:none;margin:0 auto;width:max-content;border:4px solid var(--stamp);color:var(--stamp);
+  font:800 2rem var(--serif);padding:6px 18px;text-transform:uppercase;transform:rotate(-6deg);
+}
+.stamp.on{display:block;animation:slam .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes slam{from{transform:rotate(-6deg) scale(2.6);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+.center{text-align:center}
+.who{font-family:var(--serif);font-size:1.3rem;margin:4px 0 0}
+@media (prefers-reduced-motion:reduce){.reel.tick span,.stamp.on{animation:none}}
+</style>
+</head>
+<body>
+<main class="note">
+  <h1>Estafame Si Puedes</h1>
+
+  <!-- 1. Registro -->
+  <section class="step on" id="s1">
+    <p class="sub">Crea tu cuenta para entrar a jugar.</p>
+    <form id="f1" novalidate>
+      <label for="usuario">Usuario</label>
+      <input id="usuario" autocomplete="username" maxlength="20" required>
+      <label for="correo">Correo</label>
+      <input id="correo" type="email" autocomplete="email" required>
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" autocomplete="new-password" minlength="6" required>
+      <p class="err" id="e1" role="alert"></p>
+      <button id="b1">Enviar código al correo</button>
+    </form>
+  </section>
+
+  <!-- 2. Código -->
+  <section class="step" id="s2">
+    <p class="sub">Te enviamos un código de 6 dígitos a <b id="mail"></b>.</p>
+    <form id="f2" novalidate>
+      <label for="codigo">Código</label>
+      <input id="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required>
+      <p class="err" id="e2" role="alert"></p>
+      <button id="b2">Verificar código</button>
+      <button type="button" class="link" id="reenviar">Reenviar código</button>
+      <button type="button" class="link" id="atras">Cambiar correo</button>
+    </form>
+  </section>
+
+  <!-- 3. Ruleta -->
+  <section class="step center" id="s3">
+    <p class="sub">Correo verificado. Sorteando tu rol...</p>
+    <div class="reel" id="reel" aria-live="polite"><span id="reelTxt">?</span></div>
+    <div class="stamp" id="stamp"></div>
+    <p class="err" id="e3" role="alert"></p>
+    <button id="reintentar" style="display:none">Reintentar crear cuenta</button>
+  </section>
+
+  <!-- 4. Listo -->
+  <section class="step center" id="s4">
+    <p class="sub">Tu cuenta está creada.</p>
+    <p class="who" id="quien"></p>
+    <div class="stamp on" id="stampFinal" style="margin-top:22px"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ====== CONFIGURA ESTO ====== */
+const FIREBASE_CONFIG = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  projectId: "TU_PROYECTO",
+  appId: "TU_APP_ID"
+};
+const EMAILJS_PUBLIC_KEY = "TU_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID = "TU_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID"; // variables: {{to_email}}, {{username}}, {{code}}
+/* ============================ */
+
+const ROLES = ["cliente", "estafador", "vendedor", "soporte", "hacker"];
+const CODE_TTL = 10 * 60 * 1000, MAX_TRIES = 5, RESEND_WAIT = 30;
+
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db = getFirestore(app);
+emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+const $ = id => document.getElementById(id);
+const show = n => document.querySelectorAll(".step").forEach(s => s.classList.toggle("on", s.id === "s" + n));
+let datos = null, codigo = null, expira = 0, intentos = 0, rolFinal = null, timer = null;
+
+function nuevoCodigo() {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
+  return String(n).padStart(6, "0");
+}
+
+async function enviarCodigo() {
+  codigo = nuevoCodigo(); expira = Date.now() + CODE_TTL; intentos = 0;
+  await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    to_email: datos.correo, username: datos.usuario, code: codigo
+  });
+  cooldown();
+}
+
+function cooldown() {
+  let t = RESEND_WAIT; const b = $("reenviar"); b.disabled = true;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    b.textContent = t > 0 ? `Reenviar código (${t--}s)` : "Reenviar código";
+    if (t < 0) { b.disabled = false; clearInterval(timer); }
+  }, 1000);
+}
+
+// Paso 1: registro -> manda el código
+$("f1").addEventListener("submit", async e => {
+  e.preventDefault();
+  const usuario = $("usuario").value.trim(), correo = $("correo").value.trim(), clave = $("clave").value;
+  const err = $("e1"); err.textContent = "";
+  if (usuario.length < 3) return err.textContent = "El usuario necesita al menos 3 caracteres.";
+  if (!/^\S+@\S+\.\S+$/.test(correo)) return err.textContent = "Escribe un correo válido.";
+  if (clave.length < 6) return err.textContent = "La contraseña necesita al menos 6 caracteres.";
+  datos = { usuario, correo, clave };
+  $("b1").disabled = true;
+  try {
+    await enviarCodigo();
+    $("mail").textContent = correo; $("codigo").value = ""; show(2); $("codigo").focus();
+  } catch (x) {
+    err.textContent = "No se pudo enviar el código. Revisa el correo e inténtalo otra vez.";
+  }
+  $("b1").disabled = false;
+});
+
+// Paso 2: verifica el código -> ruleta automática
+$("f2").addEventListener("submit", e => {
+  e.preventDefault();
+  const err = $("e2"); err.textContent = "";
+  if (Date.now() > expira) return err.textContent = "El código venció. Pide uno nuevo.";
+  if (intentos >= MAX_TRIES) return err.textContent = "Demasiados intentos. Pide un código nuevo.";
+  if ($("codigo").value.trim() !== codigo) {
+    intentos++; return err.textContent = "Código incorrecto.";
+  }
+  codigo = null; // un solo uso
+  show(3); ruleta();
+});
+
+$("reenviar").addEventListener("click", async () => {
+  $("e2").textContent = "";
+  try { await enviarCodigo(); $("e2").textContent = "Código reenviado."; }
+  catch { $("e2").textContent = "No se pudo reenviar el código."; }
+});
+$("atras").addEventListener("click", () => { codigo = null; show(1); });
+
+// Paso 3: animación de ruleta; al terminar se crea la cuenta
+function ruleta() {
+  rolFinal = ROLES[crypto.getRandomValues(new Uint32Array(1))[0] % ROLES.length];
+  const reel = $("reel"), txt = $("reelTxt"), stamp = $("stamp");
+  stamp.classList.remove("on"); $("e3").textContent = ""; $("reintentar").style.display = "none";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pasos = reduce ? 1 : 28; let i = 0, idx = Math.floor(Math.random() * ROLES.length);
+
+  (function girar() {
+    i++;
+    const ultimo = i >= pasos;
+    txt.textContent = ultimo ? rolFinal : ROLES[idx++ % ROLES.length];
+    reel.classList.remove("tick"); void reel.offsetWidth; reel.classList.add("tick");
+    if (ultimo) {
+      stamp.textContent = rolFinal; stamp.classList.add("on");
+      return setTimeout(crearCuenta, reduce ? 300 : 1400);
+    }
+    setTimeout(girar, 60 + Math.pow(i / pasos, 3) * 420); // frena poco a poco
+  })();
+}
+
+async function crearCuenta() {
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, datos.correo, datos.clave);
+    await updateProfile(cred.user, { displayName: datos.usuario });
+    await setDoc(doc(db, "users", cred.user.uid), {
+      username: datos.usuario, email: datos.correo, role: rolFinal, createdAt: serverTimestamp()
+    });
+    datos.clave = null;
+    $("quien").textContent = datos.usuario;
+    $("stampFinal").textContent = rolFinal;
+    show(4);
+  } catch (x) {
+    const msg = x.code === "auth/email-already-in-use" ? "Ese correo ya tiene una cuenta."
+      : x.code === "auth/weak-password" ? "La contraseña es muy débil."
+      : "No se pudo crear la cuenta. Inténtalo de nuevo.";
+    $("e3").textContent = msg; $("reintentar").style.display = "block";
+  }
+}
+$("reintentar").addEventListener("click", crearCuenta);
+</script>
+</body>
+</html>
