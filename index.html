@@ -369,13 +369,22 @@ $("fGroq").addEventListener("submit", async e => {
   const key = $("groqKey").value.trim();
   if (!/^gsk_\S{20,}$/.test(key)) return err.textContent = "La clave de Groq empieza por gsk_ y es más larga.";
   $("bGroq").disabled = true; $("bGroq").textContent = "Validando...";
-  try {
-    if (!(await groqValida(key))) err.textContent = "Esa clave no es válida. Revísala e inténtalo de nuevo.";
-    else {
+  let ok = false;
+  try { ok = await groqValida(key); }
+  catch (x) {
+    err.textContent = "No se pudo contactar a Groq (" + (x.message || "red") + "). Inténtalo de nuevo.";
+    $("bGroq").disabled = false; $("bGroq").textContent = "Validar y guardar"; return;
+  }
+  if (!ok) err.textContent = "Esa clave no es válida. Revísala e inténtalo de nuevo.";
+  else {
+    try {
       await updateDoc(doc(db, "users", auth.currentUser.uid), { groqKey: key });
       perfil.groqKey = key; entrar(perfil.username);
+    } catch (x) {
+      err.textContent = "La clave es válida, pero no se pudo guardar en tu cuenta (" + (x.code || x.message) +
+        "). Revisa las reglas de Firestore.";
     }
-  } catch { err.textContent = "No se pudo comprobar la clave. Revisa tu conexión e inténtalo otra vez."; }
+  }
   $("bGroq").disabled = false; $("bGroq").textContent = "Validar y guardar";
 });
 $("cancelGroq").onclick = () => entrar(perfil.username);
