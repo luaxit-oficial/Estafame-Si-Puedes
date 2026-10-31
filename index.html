@@ -513,8 +513,8 @@ async function iniciar(emp) {
     G.nombre = String(n.name).slice(0, 40); $("cNom").textContent = G.nombre;
     G.sys = `Eres ${G.nombre}, ${edad} años, vives en ${ciudad}. Es un juego de rol: el jugador finge ser soporte de ${emp} e intenta convencerte de transferirle dinero. Tú eres una persona común (ficticia) que escribió a soporte con un problema.
 PRIMER MENSAJE (cuando el jugador diga INICIO): saluda, di tu nombre y cuenta un problema concreto, original y creíble con ${emp} (tema: ${EMPRESAS[emp]}) en el que pagar o mover dinero pueda surgir de forma natural. No ofrezcas dinero tú. Máximo 3 frases.
-COMPORTAMIENTO: hablas como en WhatsApp, español colombiano natural, 1 a 3 frases, sin romper el personaje ni mencionar juego o IA. Crees que hablas con soporte real pero no eres ingenuo ni paranoico: NO pides datos para verificar (ni ID de transferencia, ni número de empleado, ni nada parecido); desconfías con dudas y preguntas naturales y no te dejas convencer fácil.
-CONFIANZA (0-100): empieza en 35 y te la informan en cada mensaje. Sube de +2 a +10 si el jugador es coherente, amable, profesional, natural y avanza con tu problema. Baja de 5 a 20 si presiona, mete urgencia exagerada, se contradice, suena falso, ruega o amenaza. Si pide claves, códigos, datos de tarjeta o acceso remoto: te niegas y bajas 15 o más.
+COMPORTAMIENTO: hablas como en WhatsApp, español colombiano natural, 1 a 3 frases, sin romper el personaje ni mencionar juego o IA. Crees que hablas con soporte real pero no eres ingenuo ni paranoico. Este chat es SOLO TEXTO: no puedes ver imágenes ni capturas, no puedes abrir links ni comprobar nada fuera del chat. Por eso NUNCA pidas pruebas ni nada verificable: ni número de caso o ticket, ni referencia, ni ID de transferencia o de empleado, ni capturas, ni links, ni guías, ni documentos, ni confirmar por otro medio. Si el jugador te da números, códigos o datos, los tomas como ciertos (no puedes comprobarlos) y por sí solos no suben ni bajan la confianza. Tu desconfianza se nota solo con dudas, rodeos, respuestas cortas o reacias y preguntas naturales sobre la situación (por qué, cómo, cuánto, para qué), y no te dejas convencer fácil.
+CONFIANZA (0-100): empieza en 35 y te la informan en cada mensaje. Sube de +2 a +10 si el jugador es coherente, amable, profesional, natural y avanza con tu problema. Baja de 3 a 12 si presiona, mete urgencia exagerada, se contradice, suena falso, ruega o amenaza. Si pide claves, códigos, datos de tarjeta o acceso remoto: te niegas y bajas 15 o más.
 TRANSFERENCIAS: solo envías dinero si te piden una transferencia o pago, tu confianza ya era 90 o más antes de su mensaje y la petición es creíble (motivo ligado a tu problema, monto razonable, tono calmado). Si lo piden con confianza menor a 90, o mal hecho, te niegas o dudas y bajas 10 a 20. Si aceptas: sends_money=true, amount en pesos colombianos (entero entre 20000 y 1500000) y en reply confirmas que enviaste.
 SALIDA: responde SOLO JSON: {"reply":"...","trust":0-100,"sends_money":true/false,"amount":0}`;
     const r = await turno("INICIO", true);
@@ -546,7 +546,7 @@ $("fMsg").addEventListener("submit", async e => {
   const t = $("msg").value.trim(); if (!t) return;
   $("msg").value = ""; burbuja("yo", t); G.msgs++; lock(true);
   try {
-    const r = await turno(`[confianza actual: ${G.trust}] ${t}`);
+    const r = await turno(`[confianza actual: ${G.trust}] ${t}\n(Recordatorio interno: chat solo de texto; no pidas pruebas, capturas, links, tickets ni nada verificable.)`);
     setTrust(r.trust); burbuja("ai", r.reply);
     if (r.ok) return terminar(true, r.amount);
     if (r.trust <= 0) return terminar(false, 0);
