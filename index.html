@@ -420,7 +420,19 @@ $("cambiarGroq").onclick = abrirGroq;
 $("salirGroq").onclick = () => $("salir").click();
 
 /* ---------- Juego: estafar a la IA ---------- */
-const GROQ_MODEL = "llama-3.3-70b-versatile"; // cámbialo si Groq retira este modelo
+const PREFERIDOS = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b",
+  "meta-llama/llama-4-scout-17b-16e-instruct", "llama-3.1-8b-instant"];
+const NO_CHAT = /whisper|tts|guard|playai|orpheus|compound|safeguard|embed/i;
+let modelo = null, modeloKey = null;
+async function elegirModelo() {          // usa un modelo que tu clave realmente tenga disponible
+  if (modelo && modeloKey === perfil.groqKey) return modelo;
+  const r = await fetch("https://api.groq.com/openai/v1/models", { headers: { Authorization: "Bearer " + perfil.groqKey } });
+  if (!r.ok) throw new Error(r.status === 401 ? "clave" : "modelos " + r.status);
+  const ids = (await r.json()).data.map(m => m.id);
+  modelo = PREFERIDOS.find(m => ids.includes(m)) || ids.find(m => !NO_CHAT.test(m));
+  if (!modelo) throw new Error("sin modelos");
+  modeloKey = perfil.groqKey; return modelo;
+}
 const EMPRESAS = {
   "Bancolombia":"transferencias, cuenta de ahorros, app bloqueada o cobros raros",
   "Nequi":"plata atrapada, envío a otro Nequi, bolsillos o recarga",
@@ -465,13 +477,18 @@ Object.keys(EMPRESAS).forEach(n => {
 });
 
 async function groq(messages, temp = 0.9) {
-  const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const model = await elegirModelo();
+  const pedir = json => fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + perfil.groqKey },
-    body: JSON.stringify({ model: GROQ_MODEL, messages, temperature: temp, max_tokens: 400, response_format: { type: "json_object" } })
+    body: JSON.stringify({ model, messages, temperature: temp, max_tokens: 500, ...(json ? { response_format: { type: "json_object" } } : {}) })
   });
-  if (!r.ok) throw new Error(r.status === 401 ? "clave" : "groq " + r.status);
-  return JSON.parse((await r.json()).choices[0].message.content);
+  let r = await pedir(true);
+  if (r.status === 400) r = await pedir(false);       // algunos modelos no tienen modo JSON
+  if (!r.ok) { if (r.status === 404) modelo = null; throw new Error(r.status === 401 ? "clave" : "groq " + r.status); }
+  const t = (await r.json()).choices[0].message.content;
+  const m = t.match(/\{[\s\S]*\}/);
+  return JSON.parse(m ? m[0] : t);
 }
 function burbuja(cls, t) {
   const d = document.createElement("div"); d.className = "m " + cls; d.textContent = t;
